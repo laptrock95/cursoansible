@@ -30,4 +30,14 @@
           - resultado_servicio.services[0].state == "running"
         fail_msg: "El servicio {{ servicio }} NO está corriendo o no existe"
         success_msg: "El servicio {{ servicio }} está corriendo correctamente"
-    
+
+
+    - name: Crear usuario en Windows
+      ansible.windows.win_user:
+        name: ecuador
+        password: "P@ssw0rd123!"   # cambia la contraseña
+        state: present
+        groups:
+          - Users
+        password_never_expires: yes
+        

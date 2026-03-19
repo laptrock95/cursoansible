@@ -1,0 +1,37 @@
+- name: Validar espacio en disco en servidores Linux
+  hosts: all
+  become: false
+  gather_facts: true
+ 
+  vars:
+    disk_threshold: 80   # porcentaje máximo permitido
+    mount_point: "/"     # punto de montaje a validar
+ 
+  tasks:
+ 
+    - name: Obtener información de discos
+      set_fact:
+        disk_info: "{{ ansible_facts.mounts | selectattr('mount', 'equalto', mount_point) | list }}"
+ 
+    - name: Validar que el mount exista
+      fail:
+        msg: "El punto de montaje {{ mount_point }} no existe en el servidor"
+      when: disk_info | length == 0
+ 
+    - name: Calcular uso de disco
+      set_fact:
+        disk_usage: "{{ (100 - ((disk_info[0].size_available * 100) / disk_info[0].size_total)) | int }}"
+ 
+    - name: Mostrar uso de disco
+      debug:
+        msg: "Uso de disco en {{ mount_point }}: {{ disk_usage }}%"
+ 
+    - name: Validar si el uso excede el umbral
+      fail:
+        msg: "🚨 Disco lleno: uso actual {{ disk_usage }}% supera el límite de {{ disk_threshold }}%"
+      when: disk_usage > disk_threshold
+ 
+    - name: Confirmación OK
+      debug:
+        msg: "✅ Espacio en disco OK: {{ disk_usage }}%"
+      when: disk_usage <= disk_threshold
