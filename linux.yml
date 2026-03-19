@@ -1,5 +1,5 @@
 - name: Validar espacio en disco en servidores Linux
-  hosts: all
+  hosts: os_linux
   become: false
   gather_facts: true
  

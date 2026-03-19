@@ -1,6 +1,6 @@
 ---
 - name: Obtener uso de CPU en Windows (usando módulo)
-  hosts: all
+  hosts: os_windows
   gather_facts: false
  
   tasks:
