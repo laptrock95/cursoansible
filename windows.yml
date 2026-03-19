@@ -17,6 +17,15 @@
       ansible.builtin.debug:
         msg: "Uso de CPU en {{ inventory_hostname }}: {{ cpu_percent }}%"
 
+
+    - name: Obtener lista de servicios en Windows
+      ansible.windows.win_service_info:
+      register: servicios
+    
+    - name: Mostrar todos los servicios
+      ansible.builtin.debug:
+        var: servicios.services
+
     - name: Consultar servicio WinRM sin detener el playbook
       ansible.windows.win_service_info:
         name: WinRM
