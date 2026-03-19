@@ -22,9 +22,9 @@
       ansible.windows.win_service_info:
       register: servicios
     
-    - name: Mostrar todos los servicios
-      ansible.builtin.debug:
-        var: servicios.services
+    # - name: Mostrar todos los servicios
+    #   ansible.builtin.debug:
+    #     var: servicios.services
 
     - name: Consultar servicio WinRM sin detener el playbook
       ansible.windows.win_service_info:
