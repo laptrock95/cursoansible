@@ -1,240 +1,44 @@
-- name: Validaciones y mantenimiento en servidores Linux
-
+---
+- name: Validaciones y administración básica en Linux
   hosts: os_linux
-
+  become: true
   gather_facts: true
-
-  become: false
- 
-  vars:
-
-    mount_point: "/"
-
-    disk_threshold: 80          # % máximo de uso de disco
-
-    memory_threshold: 80        # % máximo de uso de RAM
-
-    critical_services:
-
-      - sshd
-
-      - chronyd
-
-    user_to_create: "ecuador"
  
   tasks:
-
-    - name: Obtener información del punto de montaje
-
-      set_fact:
-
-        disk_info: >-
-
-          {{
-
-            ansible_facts.mounts
-
-            | selectattr('mount', 'equalto', mount_point)
-
-            | list
-
-          }}
+    - name: Verificar uso de CPU
+      ansible.builtin.shell: "top -bn1 | grep 'Cpu(s)' | awk '{print 100 - $8}'"
+      register: cpu_uso
+      changed_when: false
  
-    - name: Validar que el punto de montaje exista
-
-      fail:
-
-        msg: "El punto de montaje {{ mount_point }} no existe en el servidor"
-
-      when: (disk_info | length) == 0
+    - name: Mostrar uso de CPU
+      ansible.builtin.debug:
+        msg: "Uso de CPU en {{ inventory_hostname }}: {{ cpu_uso.stdout }}%"
  
-    - name: Calcular uso de disco
-
-      set_fact:
-
-        disk_usage_pct: >-
-
-          {{
-
-            (
-
-              100 - ((disk_info[0].size_available | float * 100) / (disk_info[0].size_total | float))
-
-            ) | round(0, 'floor') | int
-
-          }}
+    - name: Obtener servicios del sistema
+      ansible.builtin.service_facts:
  
-    - name: Mostrar uso de disco
-
-      debug:
-
-        msg: "Uso de disco en {{ mount_point }}: {{ disk_usage_pct }}%"
- 
-    - name: Validar umbral de disco
-
-      fail:
-
-        msg: "🚨 Disco lleno: uso actual {{ disk_usage_pct }}% supera el límite de {{ disk_threshold }}%"
-
-      when: disk_usage_pct > (disk_threshold | int)
- 
-    - name: Confirmación disco OK
-
-      debug:
-
-        msg: "✅ Espacio en disco OK: {{ disk_usage_pct }}%"
-
-      when: disk_usage_pct <= (disk_threshold | int)
- 
-    - name: Calcular uso de memoria RAM
-
-      set_fact:
-
-        memory_usage_pct: >-
-
-          {{
-
-            (
-
-              ((ansible_facts.memtotal_mb | float) - (ansible_facts.memfree_mb | float))
-
-              / (ansible_facts.memtotal_mb | float) * 100
-
-            ) | round(0, 'floor') | int
-
-          }}
- 
-    - name: Mostrar uso de memoria RAM
-
-      debug:
-
-        msg: "Uso de memoria RAM: {{ memory_usage_pct }}%"
- 
-    - name: Validar umbral de memoria RAM
-
-      fail:
-
-        msg: "🚨 Memoria alta: uso actual {{ memory_usage_pct }}% supera el límite de {{ memory_threshold }}%"
-
-      when: memory_usage_pct > (memory_threshold | int)
- 
-    - name: Confirmación memoria OK
-
-      debug:
-
-        msg: "✅ Memoria RAM OK: {{ memory_usage_pct }}%"
-
-      when: memory_usage_pct <= (memory_threshold | int)
- 
-    - name: Recolectar estado de servicios
-
-      service_facts:
- 
-    - name: Validar que los servicios críticos estén instalados
-
-      fail:
-
-        msg: "🚨 El servicio crítico '{{ item }}' no está instalado o no aparece en service_facts"
-
-      loop: "{{ critical_services }}"
-
-      when: >
-
-        (item + '.service') not in ansible_facts.services and
-
-        item not in ansible_facts.services
- 
-    - name: Validar que los servicios críticos estén activos
-
-      fail:
-
-        msg: "🚨 El servicio crítico '{{ item }}' no está corriendo"
-
-      loop: "{{ critical_services }}"
-
-      when: >
-
-        (
-
-          (item + '.service') in ansible_facts.services and
-
-          ansible_facts.services[item + '.service'].state != 'running'
-
-        ) or
-
-        (
-
-          item in ansible_facts.services and
-
-          ansible_facts.services[item].state != 'running'
-
-        )
- 
-    - name: Confirmación servicios críticos OK
-
-      debug:
-
-        msg: "✅ Servicio crítico '{{ item }}' está en ejecución"
-
-      loop: "{{ critical_services }}"
-
-      when: >
-
-        (
-
-          (item + '.service') in ansible_facts.services and
-
-          ansible_facts.services[item + '.service'].state == 'running'
-
-        ) or
-
-        (
-
-          item in ansible_facts.services and
-
-          ansible_facts.services[item].state == 'running'
-
-        )
+    - name: Enlistar servicios y estado
+      ansible.builtin.debug:
+        msg: "{{ item.key }} -> {{ item.value.state }}"
+      loop: "{{ ansible_facts.services | dict2items }}"
  
     - name: Crear usuario ecuador
-
-      become: true
-
-      user:
-
-        name: "{{ user_to_create }}"
-
+      ansible.builtin.user:
+        name: ecuador
         state: present
-
-        shell: /bin/bash
-
         create_home: true
+        shell: /bin/bash
  
-    - name: Actualizar todos los paquetes en RHEL 8 o superior
-
-      become: true
-
-      dnf:
-
-        name: "*"
-
-        state: latest
-
-        update_only: true
-
-      when: (ansible_facts.distribution_major_version | int) >= 8
+    - name: Actualizar sistema operativo en Debian/Ubuntu
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+      when: ansible_facts['os_family'] == "Debian"
  
-    - name: Actualizar todos los paquetes en RHEL 7
-
-      become: true
-
-      yum:
-
+    - name: Actualizar sistema operativo en RedHat/Rocky/AlmaLinux/CentOS
+      ansible.builtin.dnf:
         name: "*"
-
         state: latest
-
         update_only: true
-
-      when: (ansible_facts.distribution_major_version | int) == 7
+      when: ansible_facts['os_family'] == "RedHat"
  
