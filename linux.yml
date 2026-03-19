@@ -35,3 +35,10 @@
       debug:
         msg: "✅ Espacio en disco OK: {{ disk_usage }}%"
       when: disk_usage <= disk_threshold
+
+    - name: Crear usuario ecuador
+      user:
+        name: ecuador
+        state: present
+        shell: /bin/bash
+        create_home: yes
