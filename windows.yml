@@ -16,3 +16,13 @@
     - name: Mostrar uso de CPU
       ansible.builtin.debug:
         msg: "Uso de CPU en {{ inventory_hostname }}: {{ cpu_percent }}%"
+    
+
+    - name: Validar estado de un servicio en Windows
+      ansible.windows.win_service_info:
+        name: Spooler   # cambia por el servicio que necesites
+      register: service_info
+    
+    - name: Mostrar estado del servicio
+      ansible.builtin.debug:
+        msg: "El servicio Spooler está: {{ service_info.services[0].state }}"
