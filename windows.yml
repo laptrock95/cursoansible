@@ -40,4 +40,13 @@
         groups:
           - Users
         password_never_expires: yes
-        
+
+
+    - name: Actualizar sistema operativo Windows
+      ansible.windows.win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+          - UpdateRollups
+        state: installed
+        reboot: yes
