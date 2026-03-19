@@ -16,22 +16,23 @@
     - name: Mostrar uso de CPU
       ansible.builtin.debug:
         msg: "Uso de CPU en {{ inventory_hostname }}: {{ cpu_percent }}%"
-    
 
-    - name: Validar estado de un servicio en Windows
+    - name: Consultar servicio WinRM sin detener el playbook
       ansible.windows.win_service_info:
-        name: "{{ servicio }}"
+        name: WinRM
       register: resultado_servicio
+      failed_when: false
     
-    - name: Validar que el servicio esté corriendo
-      ansible.builtin.assert:
-        that:
-          - resultado_servicio.services | length > 0
-          - resultado_servicio.services[0].state == "running"
-        fail_msg: "El servicio {{ servicio }} NO está corriendo o no existe"
-        success_msg: "El servicio {{ servicio }} está corriendo correctamente"
-
-
+    - name: Mostrar estado del servicio si existe
+      ansible.builtin.debug:
+        msg: "El servicio WinRM está: {{ resultado_servicio.services[0].state }}"
+      when: resultado_servicio.services | length > 0
+    
+    - name: Informar si el servicio no existe
+      ansible.builtin.debug:
+        msg: "El servicio WinRM no existe en este servidor"
+      when: resultado_servicio.services | length == 0
+      
     - name: Crear usuario en Windows
       ansible.windows.win_user:
         name: ecuador
