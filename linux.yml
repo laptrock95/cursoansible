@@ -42,3 +42,15 @@
         state: present
         shell: /bin/bash
         create_home: yes
+  
+    - name: Actualizar todos los paquetes (RHEL 8+)
+      dnf:
+        name: "*"
+        state: latest
+      when: ansible_facts.distribution_major_version | int >= 8
+ 
+    - name: Actualizar todos los paquetes (RHEL 7)
+      yum:
+        name: "*"
+        state: latest
+      when: ansible_facts.distribution_major_version | int == 7
