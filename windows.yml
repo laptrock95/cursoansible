@@ -49,4 +49,4 @@
           - CriticalUpdates
           - UpdateRollups
         state: installed
-        reboot: yes
+        reboot: false
